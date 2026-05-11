@@ -1,11 +1,13 @@
-version: '3.9'
-
 services:
   web:
     build: .
     restart: unless-stopped
+    # Bound to loopback: production traffic must hit this through a reverse
+    # proxy (Cloudflare, nginx, Caddy) that terminates TLS and sets
+    # X-Forwarded-For. Direct exposure would let clients spoof XFF and
+    # bypass the per-IP rate limiter.
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     environment:
       DATABASE_URL: ${DATABASE_URL}
       NEXT_PUBLIC_EVENT_DATE: ${NEXT_PUBLIC_EVENT_DATE}
@@ -14,20 +16,34 @@ services:
       NEXT_PUBLIC_WHATSAPP_DEFAULT_MESSAGE: ${NEXT_PUBLIC_WHATSAPP_DEFAULT_MESSAGE}
       NEXT_PUBLIC_YOUTUBE_LIVE_ID: ${NEXT_PUBLIC_YOUTUBE_LIVE_ID}
       NEXT_PUBLIC_META_PIXEL_ID: ${NEXT_PUBLIC_META_PIXEL_ID}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://127.0.0.1:3000/api/ready']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: jesusvive
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: jesusvive
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - '5432:5432'
+    # No host port mapping by default — uncomment for local debugging only.
+    # ports:
+    #   - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jesusvive -d jesusvive']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pgdata:

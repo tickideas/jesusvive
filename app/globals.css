@@ -1,16 +1,24 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #E85D04;
+  --color-brand-dark: #0B2545;
+  --color-brand-accent: #FFB703;
+  --color-brand-cream: #FAF6F1;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Poppins", "Inter", sans-serif;
+}
 
 @layer base {
   html {
     scroll-behavior: smooth;
   }
   body {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
   h1, h2, h3, h4 {
-    font-family: 'Poppins', 'Inter', sans-serif;
+    font-family: var(--font-display);
   }
 }
 

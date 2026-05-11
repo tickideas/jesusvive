@@ -1,0 +1,33 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+{$PUBLIC_DOMAIN} {
+	encode zstd gzip
+
+	# Sensible security defaults. Adjust CSP separately if needed.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Strip any inbound proxy headers so clients can't spoof client IPs.
+	# Caddy will set its own X-Forwarded-* on the upstream request below.
+	request_header -X-Forwarded-For
+	request_header -X-Real-IP
+	request_header -X-Forwarded-Proto
+	request_header -X-Forwarded-Host
+	request_header -CF-Connecting-IP
+	request_header -True-Client-IP
+	request_header -Forwarded
+
+	# Topology note: this config assumes Caddy is the *only* proxy in front of
+	# the app. If you put another L7 proxy (e.g., Cloudflare) ahead of Caddy,
+	# Caddy will see the CDN's edge IP as the client. To restore real-client
+	# IPs, configure Caddy's `servers > trusted_proxies` and
+	# `client_ip_headers` (e.g., CF-Connecting-IP) in the global block, and
+	# stop stripping that header above.
+	reverse_proxy web:3000
+}

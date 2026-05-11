@@ -30,16 +30,13 @@ export const registrationSchema = z.object({
       }
     }),
   email: z
-    .string()
     .email('E-mail inválido.')
     .optional()
     .or(z.literal('')),
   city: z.string().min(1, 'Por favor, escolha sua cidade.'),
   language: z.enum(['pt-BR', 'en']).default('pt-BR'),
   lgpdConsent: z.literal(true, {
-    errorMap: () => ({
-      message: 'É necessário concordar com a Política de Privacidade.',
-    }),
+    error: () => 'É necessário concordar com a Política de Privacidade.',
   }),
   // Hidden / auto fields
   cellId: z.string(),
@@ -50,4 +47,4 @@ export const registrationSchema = z.object({
   utmContent: z.string().optional(),
 });
 
-export type RegistrationInput = z.infer<typeof registrationSchema>;
+export type RegistrationInput = z.input<typeof registrationSchema>;

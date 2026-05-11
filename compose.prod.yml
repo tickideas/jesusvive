@@ -1,0 +1,40 @@
+# Production overlay: adds a TLS-terminating reverse proxy in front of the
+# loopback-bound web service from docker-compose.yml.
+#
+# Requires Docker Compose v2.24+ for the `!reset` directive used below.
+#
+# Usage:
+#   PUBLIC_DOMAIN=jesusvive.example LETSENCRYPT_EMAIL=ops@example \
+#     docker compose -f docker-compose.yml -f compose.prod.yml up -d
+#
+# The proxy:
+#   - terminates TLS (Caddy automatic HTTPS via Let's Encrypt)
+#   - strips inbound Forwarded / X-Forwarded-* headers and sets its own,
+#     so the app's per-IP rate limiter sees real client IPs
+#   - is the only service exposed on host ports 80/443
+services:
+  web:
+    # Expose web only inside the compose network — drop the loopback host
+    # publish from the base file by overriding `ports` to nothing.
+    ports: !reset []
+
+  proxy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?PUBLIC_DOMAIN must be set}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:?LETSENCRYPT_EMAIL must be set}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:

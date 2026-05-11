@@ -28,11 +28,11 @@ const walkInSchema = z.object({
       }
     }),
   lgpdConsent: z.literal(true, {
-    errorMap: () => ({ message: 'Aceite a Política de Privacidade.' }),
+    error: () => 'Aceite a Política de Privacidade.',
   }),
 });
 
-type WalkInInput = z.infer<typeof walkInSchema>;
+type WalkInInput = z.input<typeof walkInSchema>;
 
 interface Props {
   label: string;

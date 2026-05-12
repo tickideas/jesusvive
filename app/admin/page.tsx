@@ -121,12 +121,20 @@ export default async function AdminPage({
           <h1 className="text-2xl font-bold">Jesus Vive Brasil — Admin</h1>
           <p className="text-sm text-gray-600">Registrations dashboard</p>
         </div>
-        <a
-          href={`/api/admin/leads.csv?${exportParams.toString()}`}
-          className="inline-flex items-center rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-        >
-          Export CSV
-        </a>
+        <div className="flex gap-2">
+          <a
+            href="/admin/streams"
+            className="inline-flex items-center rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          >
+            Gerenciar streams
+          </a>
+          <a
+            href={`/api/admin/leads.csv?${exportParams.toString()}`}
+            className="inline-flex items-center rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            Export CSV
+          </a>
+        </div>
       </header>
 
       {/* Stats */}

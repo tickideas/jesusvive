@@ -16,6 +16,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "drizzle-orm": "^0.45.2",
+    "hls.js": "^1.6.16",
     "libphonenumber-js": "^1.13.1",
     "next": "^16.2.6",
     "postgres": "^3.4.9",

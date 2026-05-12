@@ -1,0 +1,169 @@
+/**
+ * Per-cell watch page. e.g. /ao-vivo/saopaulo
+ *
+ * Reads stream config from DB on each request (no cache) so admins can swap
+ * URLs live during the event. Each cell has its own page, its own stream,
+ * and walk-in registrations are auto-tagged to that cell.
+ */
+
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { CELL_CONFIG, type CellSlug } from '@/lib/cells';
+import { buildWhatsAppLink } from '@/lib/whatsapp';
+import { getStreamConfig } from '@/lib/stream';
+import { WalkInModal } from '../WalkInModal';
+import { HLSPlayer } from '../HLSPlayer';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const CITIES: CellSlug[] = ['saopaulo', 'rio', 'brasilia'];
+
+export function generateStaticParams() {
+  return CITIES.map((city) => ({ city }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ city: string }>;
+}): Promise<Metadata> {
+  const { city } = await params;
+  const cell = CELL_CONFIG[city as CellSlug];
+  if (!cell) return { title: 'Ao Vivo — Jesus Vive Brasil' };
+  return {
+    title: `Ao Vivo ${cell.cityLabel} — Jesus Vive Brasil`,
+    description: `Acompanhe Jesus Vive Brasil ao vivo com a célula de ${cell.cityLabel}.`,
+  };
+}
+
+export default async function CellStreamPage({
+  params,
+}: {
+  params: Promise<{ city: string }>;
+}) {
+  const { city } = await params;
+  const cell = CELL_CONFIG[city as CellSlug];
+  if (!cell) notFound();
+
+  const stream = await getStreamConfig(cell.cellId);
+  const waLink = buildWhatsAppLink(
+    `Estou assistindo Jesus Vive Brasil (${cell.cityLabel}) ao vivo e quero acompanhamento.`,
+  );
+
+  return (
+    <main className="min-h-screen bg-brand-dark text-white">
+      <header className="border-b border-white/10 bg-brand-dark/95 backdrop-blur sticky top-0 z-30">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-brand-accent">
+              Ao Vivo · {cell.cityLabel}
+            </p>
+            <p className="font-display font-bold">Jesus Vive Brasil</p>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                stream.source === 'offline'
+                  ? 'bg-gray-500'
+                  : 'animate-pulse bg-red-500'
+              }`}
+            />
+            <span className="font-semibold">
+              {stream.source === 'offline' ? 'EM BREVE' : 'LIVE'}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <div className="grid gap-6 lg:grid-cols-[1fr,360px]">
+          <div>
+            <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-2xl">
+              {stream.source === 'hls' && stream.url ? (
+                <HLSPlayer src={stream.url} />
+              ) : stream.source === 'youtube' && stream.url ? (
+                <iframe
+                  src={`https://www.youtube.com/embed/${stream.url}?autoplay=1&rel=0`}
+                  title={`Jesus Vive Brasil — ${cell.cityLabel}`}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  className="h-full w-full"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-white/60">
+                  <p>A transmissão começará em breve.</p>
+                </div>
+              )}
+            </div>
+
+            {stream.title && (
+              <h2 className="mt-4 font-display text-lg font-bold">
+                {stream.title}
+              </h2>
+            )}
+            {stream.note && (
+              <p className="mt-1 text-sm text-white/70">{stream.note}</p>
+            )}
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <WalkInModal
+                label="Quero conhecer Jesus"
+                cellId={cell.cellId}
+                cityLabel={cell.cityLabel}
+              />
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener"
+                className="btn-secondary border-white bg-transparent text-white hover:bg-white hover:text-brand-dark"
+              >
+                Falar no WhatsApp
+              </a>
+            </div>
+
+            <div className="mt-6 rounded-xl bg-white/5 p-4 text-sm text-white/85">
+              <h3 className="font-display text-base font-bold text-brand-accent">
+                Agenda
+              </h3>
+              <ul className="mt-2 space-y-1">
+                <li>• Adoração e oração</li>
+                <li>• Mensagem da Palavra</li>
+                <li>• Tempo de ministração</li>
+                <li>• Próximos passos com sua célula</li>
+              </ul>
+            </div>
+          </div>
+
+          <aside className="space-y-4">
+            <div className="rounded-xl bg-white/5 p-4">
+              <h3 className="font-display text-base font-bold text-brand-accent">
+                Mural de Oração · {cell.cityLabel}
+              </h3>
+              <p className="mt-2 text-xs text-white/70">
+                Deixe seu pedido — vamos orar por você.
+              </p>
+              <div className="mt-3 rounded-lg border border-dashed border-white/20 p-6 text-center text-xs text-white/50">
+                Mural em breve
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-white/5 p-4 text-sm">
+              <h3 className="font-display text-base font-bold text-brand-accent">
+                Idioma
+              </h3>
+              <div className="mt-2 flex gap-2">
+                <button className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-semibold">
+                  PT-BR
+                </button>
+                <button className="rounded-md px-3 py-1.5 text-xs text-white/60">
+                  EN
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </main>
+  );
+}

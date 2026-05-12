@@ -45,6 +45,23 @@ event day register through `/ao-vivo` and get flagged `source = 'event-walk-in'`
 - **Note for Next.js 16**: dynamic route `params` and `searchParams` are
   `Promise<...>` — always `await` them in page components.
 
+## Watch pages (per-cell streams)
+
+Each cell has its own live page so cell leaders can run their own broadcast
+with their own content moderation:
+
+- `/ao-vivo/saopaulo` → cell-1
+- `/ao-vivo/rio` → cell-2
+- `/ao-vivo/brasilia` → cell-3
+- `/ao-vivo` (bare) → picker page (safety net for misshared links)
+
+E-cards must link directly to the per-city URLs. The stream source per cell
+is editable live at `/admin/streams` (HLS, YouTube ID, or Offline) — changes
+take effect on the next request, no redeploy.
+
+Player: hls.js with native Safari HLS fallback. Walk-in registrations from a
+cell's watch page are auto-tagged to that `cell_id`.
+
 ## File map (key files)
 
 ```
@@ -102,8 +119,8 @@ Dockerfile                         → multi-stage, standalone Next output
    - Stat cards: total, last 24h, per-cell counts
    - CSV export at `/api/admin/leads.csv` (honors same filters)
    - **Still TODO:** per-user logins so cell leads only see their own cell
-4. **Live prayer wall** on `/ao-vivo` — leaning toward Socket.io for full
-   control or Tawk.to for zero-effort
+4. **Live prayer wall** on `/ao-vivo/[city]` — leaning toward Socket.io for
+   full control or Tawk.to for zero-effort. Note: now one wall per cell.
 5. **Language toggle (PT/EN)** on `/ao-vivo` only (not on registration pages —
    ads are pt-BR only)
 6. **Exit-intent prompt** on `/ao-vivo`: "Você entregou sua vida a Jesus hoje?"

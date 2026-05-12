@@ -36,3 +36,25 @@ export const registrations = pgTable(
 
 export type Registration = typeof registrations.$inferSelect;
 export type NewRegistration = typeof registrations.$inferInsert;
+
+/**
+ * Per-cell live stream configuration. One row per cell. The `/ao-vivo/[city]`
+ * watch page reads this on each request (with a short cache) so admins can
+ * swap the stream URL mid-event without a redeploy.
+ *
+ * source = 'offline' → show "a transmissão começará em breve"
+ * source = 'hls'     → use `url` as the .m3u8 manifest
+ * source = 'youtube' → use `url` as the YouTube video ID (fallback)
+ */
+export const streamConfigs = pgTable('stream_configs', {
+  cellId: text('cell_id').primaryKey(), // 'cell-1' | 'cell-2' | 'cell-3'
+  source: text('source').notNull().default('offline'), // 'offline' | 'hls' | 'youtube'
+  url: text('url'),
+  title: text('title'),
+  note: text('note'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: text('updated_by'),
+});
+
+export type StreamConfig = typeof streamConfigs.$inferSelect;
+export type NewStreamConfig = typeof streamConfigs.$inferInsert;

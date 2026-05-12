@@ -7,6 +7,14 @@ import { z } from 'zod';
 import { isValidPhoneNumber, parsePhoneNumber } from 'libphonenumber-js';
 import { resolveCellForGenericRoute } from '@/lib/cells';
 
+interface Props {
+  label: string;
+  /** If provided, walk-ins are tagged to this cell. Otherwise the legacy
+   *  hash-based round-robin assignment is used (for the unscoped /ao-vivo). */
+  cellId?: string;
+  cityLabel?: string;
+}
+
 const walkInSchema = z.object({
   firstName: z.string().min(2, 'Informe seu nome.').max(50).trim(),
   lastName: z.string().min(2, 'Informe seu sobrenome.').max(50).trim(),
@@ -34,11 +42,7 @@ const walkInSchema = z.object({
 
 type WalkInInput = z.input<typeof walkInSchema>;
 
-interface Props {
-  label: string;
-}
-
-export function WalkInModal({ label }: Props) {
+export function WalkInModal({ label, cellId, cityLabel }: Props) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -63,11 +67,11 @@ export function WalkInModal({ label }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
-          city: 'event-walk-in',
+          city: cityLabel || 'event-walk-in',
           email: '',
           language: 'pt-BR',
           source: 'event-walk-in',
-          cellId: resolveCellForGenericRoute(data.whatsapp),
+          cellId: cellId || resolveCellForGenericRoute(data.whatsapp),
         }),
       });
       if (!res.ok) {

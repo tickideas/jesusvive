@@ -85,8 +85,15 @@ Dockerfile                         → multi-stage, standalone Next output
 
 ## Outstanding TODOs (in priority order)
 
-1. **WhatsApp Business API integration** (Take Blip, Wati, or Twilio) for
-   automated confirmation templates and 48h/24h/1h reminders
+1. ~~**WhatsApp Business API integration**~~ — scaffolded with Twilio:
+   - `lib/twilio.ts` — `sendWhatsAppTemplate()` helper (no-op until env set)
+   - `app/api/register/route.ts` — sends confirmation template after insert
+   - `app/api/cron/reminders/route.ts` — 48h/24h/1h reminder cron (Bearer
+     `CRON_SECRET`, schedule every 15 min)
+   - Migration `drizzle/0001_narrow_karma.sql` adds `confirmation_sent_at` +
+     `reminder_{48h,24h,1h}_sent_at` columns
+   - **Still needed:** buy Twilio number, complete WABA registration, get
+     templates approved, fill in `TWILIO_*_SID` env vars
 2. **Email confirmations + reminders** via Resend + cron (Dokploy cron or
    external like `cron-job.org`)
 3. **Admin dashboard** at `/admin` (basic-auth or NextAuth) so each cell lead

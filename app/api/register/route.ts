@@ -8,6 +8,7 @@ import { resolveCellForGenericRoute } from '@/lib/cells';
 import { rateLimit } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/request-ip';
 import { intEnv } from '@/lib/env';
+import { sendWhatsAppTemplate } from '@/lib/twilio';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -101,9 +102,30 @@ export async function POST(req: NextRequest) {
       return false;
     });
 
-    // TODO: Trigger WhatsApp confirmation template via Business API
+    // Fire WhatsApp confirmation. Best-effort: never fail the request if
+    // Twilio is down or the template isn't approved yet.
+    if (!deduped) {
+      const contentSid = process.env.TWILIO_TEMPLATE_CONFIRMATION_SID;
+      if (contentSid) {
+        const result = await sendWhatsAppTemplate({
+          to: data.whatsapp,
+          contentSid,
+          variables: { '1': data.firstName },
+        });
+        if (result.ok) {
+          await db
+            .update(registrations)
+            .set({ confirmationSentAt: new Date() })
+            .where(
+              and(
+                eq(registrations.whatsapp, data.whatsapp),
+                eq(registrations.source, data.source),
+              ),
+            );
+        }
+      }
+    }
     // TODO: Trigger email confirmation via Resend
-    // TODO: Schedule 48h / 24h / 1h reminders
 
     return NextResponse.json({ ok: true, cellId, deduped }, { status: 200 });
   } catch (err) {

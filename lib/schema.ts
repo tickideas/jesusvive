@@ -21,6 +21,11 @@ export const registrations = pgTable(
     ipHash: text('ip_hash'),
     userAgent: text('user_agent'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // WhatsApp delivery tracking (Twilio templates). NULL = not sent.
+    confirmationSentAt: timestamp('confirmation_sent_at', { withTimezone: true }),
+    reminder48hSentAt: timestamp('reminder_48h_sent_at', { withTimezone: true }),
+    reminder24hSentAt: timestamp('reminder_24h_sent_at', { withTimezone: true }),
+    reminder1hSentAt: timestamp('reminder_1h_sent_at', { withTimezone: true }),
   },
   (table) => ({
     cellIdx: index('reg_cell_idx').on(table.cellId),

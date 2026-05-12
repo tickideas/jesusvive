@@ -8,6 +8,13 @@
       "when": 1778536336204,
       "tag": "0000_magenta_nemesis",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778565484061,
+      "tag": "0001_narrow_karma",
+      "breakpoints": true
     }
   ]
 }

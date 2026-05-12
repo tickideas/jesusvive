@@ -96,8 +96,12 @@ Dockerfile                         → multi-stage, standalone Next output
      templates approved, fill in `TWILIO_*_SID` env vars
 2. **Email confirmations + reminders** via Resend + cron (Dokploy cron or
    external like `cron-job.org`)
-3. **Admin dashboard** at `/admin` (basic-auth or NextAuth) so each cell lead
-   can view, filter, and export their cell's leads as CSV
+3. ~~**Admin dashboard**~~ — shipped at `/admin`:
+   - Basic auth via `middleware.ts` (`ADMIN_USERNAME` / `ADMIN_PASSWORD`)
+   - Filters: cell, source, date range, free-text search (name/email/whatsapp)
+   - Stat cards: total, last 24h, per-cell counts
+   - CSV export at `/api/admin/leads.csv` (honors same filters)
+   - **Still TODO:** per-user logins so cell leads only see their own cell
 4. **Live prayer wall** on `/ao-vivo` — leaning toward Socket.io for full
    control or Tawk.to for zero-effort
 5. **Language toggle (PT/EN)** on `/ao-vivo` only (not on registration pages —

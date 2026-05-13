@@ -83,10 +83,9 @@ export default async function CellStreamPage({
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <div className="grid gap-6 lg:grid-cols-[1fr,360px]">
-          <div>
-            <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-2xl">
+      <div className="mx-auto max-w-4xl px-4 py-6">
+        <div>
+          <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-2xl">
               {stream.source === 'hls' && stream.url ? (
                 <HLSPlayer src={stream.url} />
               ) : stream.source === 'youtube' && stream.url ? (
@@ -104,71 +103,30 @@ export default async function CellStreamPage({
               )}
             </div>
 
-            {stream.title && (
-              <h2 className="mt-4 font-display text-lg font-bold">
-                {stream.title}
-              </h2>
-            )}
-            {stream.note && (
-              <p className="mt-1 text-sm text-white/70">{stream.note}</p>
-            )}
+          {stream.title && (
+            <h2 className="mt-4 font-display text-lg font-bold">
+              {stream.title}
+            </h2>
+          )}
+          {stream.note && (
+            <p className="mt-1 text-sm text-white/70">{stream.note}</p>
+          )}
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <WalkInModal
-                label="Quero conhecer Jesus"
-                cellId={cell.cellId}
-                cityLabel={cell.cityLabel}
-              />
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener"
-                className="btn-secondary border-white bg-transparent text-white hover:bg-white hover:text-brand-dark"
-              >
-                Falar no WhatsApp
-              </a>
-            </div>
-
-            <div className="mt-6 rounded-xl bg-white/5 p-4 text-sm text-white/85">
-              <h3 className="font-display text-base font-bold text-brand-accent">
-                Agenda
-              </h3>
-              <ul className="mt-2 space-y-1">
-                <li>• Adoração e oração</li>
-                <li>• Mensagem da Palavra</li>
-                <li>• Tempo de ministração</li>
-                <li>• Próximos passos com sua célula</li>
-              </ul>
-            </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <WalkInModal
+              label="Quero conhecer Jesus"
+              cellId={cell.cellId}
+              cityLabel={cell.cityLabel}
+            />
+            <a
+              href={waLink}
+              target="_blank"
+              rel="noopener"
+              className="btn-secondary border-white bg-transparent text-white hover:bg-white hover:text-brand-dark"
+            >
+              Falar no WhatsApp
+            </a>
           </div>
-
-          <aside className="space-y-4">
-            <div className="rounded-xl bg-white/5 p-4">
-              <h3 className="font-display text-base font-bold text-brand-accent">
-                Mural de Oração · {cell.cityLabel}
-              </h3>
-              <p className="mt-2 text-xs text-white/70">
-                Deixe seu pedido — vamos orar por você.
-              </p>
-              <div className="mt-3 rounded-lg border border-dashed border-white/20 p-6 text-center text-xs text-white/50">
-                Mural em breve
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-white/5 p-4 text-sm">
-              <h3 className="font-display text-base font-bold text-brand-accent">
-                Idioma
-              </h3>
-              <div className="mt-2 flex gap-2">
-                <button className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-semibold">
-                  PT-BR
-                </button>
-                <button className="rounded-md px-3 py-1.5 text-xs text-white/60">
-                  EN
-                </button>
-              </div>
-            </div>
-          </aside>
         </div>
       </div>
     </main>

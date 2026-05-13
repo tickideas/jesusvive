@@ -10,6 +10,7 @@ import { and, desc, eq, gte, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { registrations, whatsappMessages } from '@/lib/schema';
 import { CELL_CONFIG, type CellSlug } from '@/lib/cells';
+import { DeleteRowButton } from './DeleteRowButton';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -265,13 +266,16 @@ export default async function AdminPage({
                 <Th>UTM source</Th>
                 <Th>UTM campaign</Th>
                 <Th>Conf.</Th>
+                <Th>
+                  <span className="sr-only">Ações</span>
+                </Th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="text-center text-gray-500 py-6"
                   >
                     Nenhum registro encontrado.
@@ -301,6 +305,12 @@ export default async function AdminPage({
                   <Td>{r.utmSource || '—'}</Td>
                   <Td>{r.utmCampaign || '—'}</Td>
                   <Td>{r.confirmationSentAt ? '✓' : '—'}</Td>
+                  <Td>
+                    <DeleteRowButton
+                      id={r.id}
+                      name={`${r.firstName} ${r.lastName}`}
+                    />
+                  </Td>
                 </tr>
               ))}
             </tbody>

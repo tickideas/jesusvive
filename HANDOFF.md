@@ -102,15 +102,18 @@ Dockerfile                         → multi-stage, standalone Next output
 
 ## Outstanding TODOs (in priority order)
 
-1. ~~**WhatsApp Business API integration**~~ — scaffolded with Twilio:
-   - `lib/twilio.ts` — `sendWhatsAppTemplate()` helper (no-op until env set)
+1. ~~**WhatsApp Business API integration**~~ — live with Twilio:
+   - `lib/twilio.ts` — `sendWhatsAppTemplate()` for approved templates,
+     `sendWhatsAppText()` for free-form replies within the 24h window
    - `app/api/register/route.ts` — sends confirmation template after insert
-   - `app/api/cron/reminders/route.ts` — 48h/24h/1h reminder cron (Bearer
+   - `app/api/cron/reminders/route.ts` — 48h/24h/1h reminders (Bearer
      `CRON_SECRET`, schedule every 15 min)
-   - Migration `drizzle/0001_narrow_karma.sql` adds `confirmation_sent_at` +
-     `reminder_{48h,24h,1h}_sent_at` columns
-   - **Still needed:** buy Twilio number, complete WABA registration, get
-     templates approved, fill in `TWILIO_*_SID` env vars
+   - `app/api/twilio/inbound/route.ts` — inbound webhook with Twilio signature
+     validation. Configure in Twilio Console → WhatsApp Senders → Messaging
+     Endpoint → "Webhook URL for incoming messages":
+     `https://jesusvive.church/api/twilio/inbound` (HTTP POST)
+   - `app/admin/inbox` — conversation viewer with unread badge, contact
+     name lookup, 24h-window-aware reply form.
 2. **Email confirmations + reminders** via Resend + cron (Dokploy cron or
    external like `cron-job.org`)
 3. ~~**Admin dashboard**~~ — shipped at `/admin`:

@@ -58,3 +58,33 @@ export const streamConfigs = pgTable('stream_configs', {
 
 export type StreamConfig = typeof streamConfigs.$inferSelect;
 export type NewStreamConfig = typeof streamConfigs.$inferInsert;
+
+/**
+ * Inbound + outbound WhatsApp messages, for the /admin/inbox view.
+ *
+ * direction = 'in'  → customer → us (via Twilio webhook)
+ * direction = 'out' → us → customer (operator reply OR automated template)
+ *
+ * `whatsapp` is the customer's E.164 number (NOT our sender), so the inbox
+ * groups by counterparty regardless of direction.
+ */
+export const whatsappMessages = pgTable(
+  'whatsapp_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    whatsapp: text('whatsapp').notNull(), // counterparty E.164
+    direction: text('direction').notNull(), // 'in' | 'out'
+    body: text('body'),
+    twilioSid: text('twilio_sid'),
+    status: text('status'), // delivery status for 'out'
+    readAt: timestamp('read_at', { withTimezone: true }), // set when an operator opens the inbox
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    whatsappIdx: index('msg_whatsapp_idx').on(table.whatsapp),
+    createdAtIdx: index('msg_created_at_idx').on(table.createdAt),
+  }),
+);
+
+export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
+export type NewWhatsappMessage = typeof whatsappMessages.$inferInsert;

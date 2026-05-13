@@ -77,3 +77,34 @@ export async function sendWhatsAppTemplate(
     return { ok: false, error: msg };
   }
 }
+
+/**
+ * Send a plain free-form WhatsApp message (operator reply).
+ *
+ * NOTE: free-form messages only work inside Meta's 24-hour customer service
+ * window — i.e. within 24h of the customer's last inbound message. Outside
+ * that window, only approved templates can be sent (use sendWhatsAppTemplate).
+ */
+export async function sendWhatsAppText(
+  to: string,
+  body: string,
+): Promise<SendTemplateResult> {
+  const client = getClient();
+  const from = process.env.TWILIO_WHATSAPP_FROM;
+  if (!client || !from) {
+    console.warn('[twilio] sendText skipped (missing config)');
+    return { ok: false, skipped: true };
+  }
+  try {
+    const message = await client.messages.create({
+      from: toWhatsApp(from),
+      to: toWhatsApp(to),
+      body,
+    });
+    return { ok: true, sid: message.sid };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[twilio] sendText failed', { to, error: msg });
+    return { ok: false, error: msg };
+  }
+}

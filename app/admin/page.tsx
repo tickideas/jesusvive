@@ -6,9 +6,9 @@
  * keep this fast even at tens of thousands of rows.
  */
 
-import { and, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { registrations } from '@/lib/schema';
+import { registrations, whatsappMessages } from '@/lib/schema';
 import { CELL_CONFIG, type CellSlug } from '@/lib/cells';
 
 export const dynamic = 'force-dynamic';
@@ -69,7 +69,8 @@ export default async function AdminPage({
   }
   const whereClause = conditions.length ? and(...conditions) : undefined;
 
-  const [rows, totalsByCell, totalsBySource, totalsLast24h] = await Promise.all([
+  const [rows, totalsByCell, totalsBySource, totalsLast24h, unreadInboxRows] =
+    await Promise.all([
     db
       .select()
       .from(registrations)
@@ -102,10 +103,21 @@ export default async function AdminPage({
           new Date(Date.now() - 24 * 60 * 60 * 1000),
         ),
       ),
+
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(whatsappMessages)
+      .where(
+        and(
+          eq(whatsappMessages.direction, 'in'),
+          isNull(whatsappMessages.readAt),
+        ),
+      ),
   ]);
 
   const grandTotal = totalsByCell.reduce((a, r) => a + r.count, 0);
   const last24h = totalsLast24h[0]?.count ?? 0;
+  const unreadInbox = unreadInboxRows[0]?.count ?? 0;
 
   const exportParams = new URLSearchParams();
   if (cellFilter) exportParams.set('cell', cellFilter);
@@ -122,6 +134,17 @@ export default async function AdminPage({
           <p className="text-sm text-gray-600">Registrations dashboard</p>
         </div>
         <div className="flex gap-2">
+          <a
+            href="/admin/inbox"
+            className="inline-flex items-center gap-2 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          >
+            Inbox
+            {unreadInbox > 0 && (
+              <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">
+                {unreadInbox}
+              </span>
+            )}
+          </a>
           <a
             href="/admin/streams"
             className="inline-flex items-center rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"

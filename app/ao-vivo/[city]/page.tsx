@@ -13,7 +13,7 @@ import { CELL_CONFIG, type CellSlug } from '@/lib/cells';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { getStreamConfig } from '@/lib/stream';
 import { WalkInModal } from '../WalkInModal';
-import { HLSPlayer } from '../HLSPlayer';
+import { StreamPlayer } from '../StreamPlayer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -87,15 +87,9 @@ export default async function CellStreamPage({
         <div>
           <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-2xl">
               {stream.source === 'hls' && stream.url ? (
-                <HLSPlayer src={stream.url} />
+                <StreamPlayer source="hls" url={stream.url} />
               ) : stream.source === 'youtube' && stream.url ? (
-                <iframe
-                  src={`https://www.youtube.com/embed/${stream.url}?autoplay=1&rel=0`}
-                  title={`Jesus Vive Brasil — ${cell.cityLabel}`}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  className="h-full w-full"
-                />
+                <StreamPlayer source="youtube" url={stream.url} />
               ) : (
                 <div className="flex h-full items-center justify-center text-white/60">
                   <p>A transmissão começará em breve.</p>

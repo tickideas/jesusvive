@@ -19,6 +19,7 @@
     "hls.js": "^1.6.16",
     "libphonenumber-js": "^1.13.1",
     "next": "^16.2.6",
+    "plyr": "^3.8.4",
     "postgres": "^3.4.9",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

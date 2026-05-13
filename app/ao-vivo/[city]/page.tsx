@@ -7,6 +7,7 @@
  */
 
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CELL_CONFIG, type CellSlug } from '@/lib/cells';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
@@ -57,7 +58,13 @@ export default async function CellStreamPage({
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div>
             <p className="text-xs uppercase tracking-widest text-brand-accent">
-              Ao Vivo · {cell.cityLabel}
+              Ao Vivo · {cell.cityLabel}{' '}
+              <Link
+                href="/ao-vivo?pick=1"
+                className="ml-1 normal-case tracking-normal text-white/60 underline"
+              >
+                trocar
+              </Link>
             </p>
             <p className="font-display font-bold">Jesus Vive Brasil</p>
           </div>

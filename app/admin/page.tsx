@@ -147,6 +147,12 @@ export default async function AdminPage({
             )}
           </a>
           <a
+            href="/admin/reminders"
+            className="inline-flex items-center rounded border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+          >
+            Lembretes manuais
+          </a>
+          <a
             href="/admin/streams"
             className="inline-flex items-center rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
           >

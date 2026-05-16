@@ -29,6 +29,13 @@
       "when": 1778654925524,
       "tag": "0003_brave_mindworm",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778964841600,
+      "tag": "0004_watch_sessions",
+      "breakpoints": true
     }
   ]
 }

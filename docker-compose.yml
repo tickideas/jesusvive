@@ -27,6 +27,9 @@ services:
       TWILIO_TEMPLATE_REMINDER_1H_SID: ${TWILIO_TEMPLATE_REMINDER_1H_SID:-}
       # Shared secret for /api/cron/reminders (Bearer auth)
       CRON_SECRET: ${CRON_SECRET:-}
+      # Optional: restrict /api/analytics/watch to this origin (CSRF-ish).
+      # Comma-separated list. Leave blank to accept any origin (dev).
+      WATCH_ANALYTICS_ALLOWED_ORIGIN: ${WATCH_ANALYTICS_ALLOWED_ORIGIN:-}
     depends_on:
       db:
         condition: service_healthy

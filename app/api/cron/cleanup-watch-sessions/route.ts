@@ -35,7 +35,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // ISO string, not Date — raw `sql` template doesn't auto-serialize Date.
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const cutoffIso = cutoff.toISOString();
 
   // Batch delete with LIMIT to keep lock duration and memory bounded. Each
   // batch is its own transaction, so other queries can interleave. We cap
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
         delete from ${watchSessions}
         where ${watchSessions.id} in (
           select ${watchSessions.id} from ${watchSessions}
-          where ${watchSessions.startedAt} < ${cutoff}
+          where ${watchSessions.startedAt} < ${cutoffIso}::timestamptz
           limit ${BATCH_SIZE}
         )
         returning 1

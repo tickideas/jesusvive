@@ -102,8 +102,15 @@ export default async function AnalyticsPage({
   })();
 
   // All durations clamp negative/null using greatest(... , 0).
-  const sinceFilter = since
-    ? sql`where started_at >= ${since}`
+  //
+  // NOTE: drizzle's raw `sql` template binds parameters via postgres-js,
+  // which requires string|Buffer|ArrayBuffer — it does NOT auto-serialize
+  // JS Date objects (that conversion only happens when going through the
+  // typed query builder). Cast to ISO string explicitly. Postgres parses
+  // ISO 8601 into `timestamptz` losslessly.
+  const sinceIso = since?.toISOString();
+  const sinceFilter = sinceIso
+    ? sql`where started_at >= ${sinceIso}::timestamptz`
     : sql``;
 
   const perCellSql = sql<CellRow>`

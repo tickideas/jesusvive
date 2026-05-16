@@ -59,7 +59,11 @@ function readUtms(): Record<string, string | null> {
 
 function isMobileGuess(): boolean {
   try {
-    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const ua = navigator.userAgent;
+    if (/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) return true;
+    // iPadOS 13+ identifies as Macintosh by default. Detect via touch points.
+    if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return true;
+    return false;
   } catch {
     return false;
   }

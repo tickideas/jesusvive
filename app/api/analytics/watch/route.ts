@@ -6,25 +6,36 @@
  *          sessionId, cellId, referrer?, utm{Source,Medium,Campaign,Content}?,
  *          isMobile? }
  *
- * - `start`: INSERT (or no-op if the sessionId already exists; client may
- *   double-fire on Strict-Mode remounts).
- * - `ping` : UPDATE last_heartbeat_at.
- * - `end`  : UPDATE ended_at + last_heartbeat_at.
+ * All three events upsert on sessionId. We can't assume `start` arrives
+ * first: on slow mobile networks the initial POST competes with HLS
+ * segment fetches, and `end` rides on sendBeacon which fires during
+ * pagehide. So:
+ *
+ * - `start`: INSERT row; on conflict, leave existing row alone.
+ * - `ping` : INSERT minimal row; on conflict, refresh last_heartbeat_at.
+ * - `end`  : INSERT minimal row; on conflict, stamp ended_at +
+ *            last_heartbeat_at.
  *
  * Fire-and-forget from the client (sendBeacon for `end`). The endpoint
- * returns 204 on the happy path and never throws back at the client —
+ * returns 204 on every code path and never throws back at the client —
  * analytics must never disrupt the watch experience.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { watchSessions } from '@/lib/schema';
-import { CELL_CONFIG } from '@/lib/cells';
 import { rateLimit } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/request-ip';
 import { intEnv } from '@/lib/env';
+import {
+  isOriginAllowed,
+  isValidCellId,
+  isValidSessionId,
+  isWatchEvent,
+  sanitizeString,
+} from './validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,22 +46,17 @@ const RATE_LIMIT_WINDOW_MS = intEnv(
   60_000,
 );
 
-const VALID_CELL_IDS = new Set(
-  Object.values(CELL_CONFIG).map((c) => c.cellId),
-);
-
-const SESSION_ID_RE = /^[a-zA-Z0-9_-]{8,64}$/;
+// Optional CSRF-ish origin check. When unset (dev/staging), accept any
+// origin so local testing still works. In production set this to your
+// public origin, e.g. `https://jesusvive.church`. Comma-separated list ok.
+const ALLOWED_ORIGINS = (process.env.WATCH_ANALYTICS_ALLOWED_ORIGIN || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 function hashIp(ip: string | null): string | null {
   if (!ip) return null;
   return createHash('sha256').update(ip).digest('hex').slice(0, 32);
-}
-
-function trim(v: unknown, max = 200): string | null {
-  if (typeof v !== 'string') return null;
-  const s = v.trim();
-  if (!s) return null;
-  return s.slice(0, max);
 }
 
 interface Payload {
@@ -77,6 +83,18 @@ async function readPayload(req: NextRequest): Promise<Payload | null> {
 }
 
 export async function POST(req: NextRequest) {
+  // Reject foreign origins silently with 204 — same status as everything
+  // else so a probe can't distinguish "blocked" from "accepted".
+  if (
+    !isOriginAllowed(
+      ALLOWED_ORIGINS,
+      req.headers.get('origin'),
+      req.headers.get('referer'),
+    )
+  ) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const ip = clientIp(req);
   const rl = rateLimit(
     `watch-analytics:${ip ?? 'unknown'}`,
@@ -90,47 +108,55 @@ export async function POST(req: NextRequest) {
   const payload = await readPayload(req);
   if (!payload) return new NextResponse(null, { status: 204 });
 
-  const event = payload.event;
-  const sessionId = typeof payload.sessionId === 'string' ? payload.sessionId : '';
-  const cellId = typeof payload.cellId === 'string' ? payload.cellId : '';
-
-  if (event !== 'start' && event !== 'ping' && event !== 'end') {
-    return new NextResponse(null, { status: 204 });
-  }
-  if (!SESSION_ID_RE.test(sessionId)) {
-    return new NextResponse(null, { status: 204 });
-  }
-  if (!VALID_CELL_IDS.has(cellId)) {
+  const { event, sessionId, cellId } = payload;
+  if (
+    !isWatchEvent(event) ||
+    !isValidSessionId(sessionId) ||
+    !isValidCellId(cellId)
+  ) {
     return new NextResponse(null, { status: 204 });
   }
 
   try {
+    const baseValues = {
+      sessionId,
+      cellId,
+      referrer: sanitizeString(payload.referrer, 500),
+      utmSource: sanitizeString(payload.utmSource, 200),
+      utmMedium: sanitizeString(payload.utmMedium, 200),
+      utmCampaign: sanitizeString(payload.utmCampaign, 200),
+      utmContent: sanitizeString(payload.utmContent, 200),
+      ipHash: hashIp(ip),
+      userAgent: sanitizeString(req.headers.get('user-agent'), 500),
+      isMobile: typeof payload.isMobile === 'boolean' ? payload.isMobile : null,
+    };
+
     if (event === 'start') {
+      // INSERT; if a late ping/end already created the row, leave it alone
+      // (its last_heartbeat_at / ended_at are more recent than start metadata).
       await db
         .insert(watchSessions)
-        .values({
-          sessionId,
-          cellId,
-          referrer: trim(payload.referrer, 500),
-          utmSource: trim(payload.utmSource, 200),
-          utmMedium: trim(payload.utmMedium, 200),
-          utmCampaign: trim(payload.utmCampaign, 200),
-          utmContent: trim(payload.utmContent, 200),
-          ipHash: hashIp(ip),
-          userAgent: trim(req.headers.get('user-agent'), 500),
-          isMobile: typeof payload.isMobile === 'boolean' ? payload.isMobile : null,
-        })
+        .values(baseValues)
         .onConflictDoNothing({ target: watchSessions.sessionId });
     } else if (event === 'ping') {
+      // Upsert. If start hasn't landed yet, this seeds the row so the session
+      // is still counted; otherwise it just refreshes last_heartbeat_at.
       await db
-        .update(watchSessions)
-        .set({ lastHeartbeatAt: sql`now()` })
-        .where(eq(watchSessions.sessionId, sessionId));
-    } else if (event === 'end') {
+        .insert(watchSessions)
+        .values(baseValues)
+        .onConflictDoUpdate({
+          target: watchSessions.sessionId,
+          set: { lastHeartbeatAt: sql`now()` },
+        });
+    } else {
+      // event === 'end'
       await db
-        .update(watchSessions)
-        .set({ endedAt: sql`now()`, lastHeartbeatAt: sql`now()` })
-        .where(eq(watchSessions.sessionId, sessionId));
+        .insert(watchSessions)
+        .values({ ...baseValues, endedAt: sql`now()` })
+        .onConflictDoUpdate({
+          target: watchSessions.sessionId,
+          set: { endedAt: sql`now()`, lastHeartbeatAt: sql`now()` },
+        });
     }
   } catch (err) {
     console.error('[watch-analytics] insert/update failed:', err);

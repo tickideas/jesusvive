@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { CELL_CONFIG } from '@/lib/cells';
+import { AutoRefresh } from './AutoRefresh';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -38,6 +39,7 @@ interface UtmRow {
 }
 
 interface RecentRow {
+  sessionId: string;
   startedAt: Date;
   endedAt: Date | null;
   cellId: string;
@@ -151,6 +153,7 @@ export default async function AnalyticsPage({
 
   const recentSql = sql<RecentRow>`
     select
+      session_id as "sessionId",
       started_at as "startedAt",
       ended_at as "endedAt",
       cell_id as "cellId",
@@ -206,8 +209,9 @@ export default async function AnalyticsPage({
 
   return (
     <main className="mx-auto max-w-7xl p-6 space-y-6">
-      {/* Auto-refresh every 30s for live ops view. */}
-      <meta httpEquiv="refresh" content="30" />
+      {/* Auto-refresh every 30s for live ops view. Uses router.refresh()
+          to preserve scroll/selection state. */}
+      <AutoRefresh intervalMs={30_000} />
 
       <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -238,7 +242,7 @@ export default async function AnalyticsPage({
             ['all', 'Tudo'],
           ] as const
         ).map(([key, label]) => (
-          <a
+          <Link
             key={key}
             href={`/admin/analytics?window=${key}`}
             className={`rounded px-3 py-1.5 border ${
@@ -248,7 +252,7 @@ export default async function AnalyticsPage({
             }`}
           >
             {label}
-          </a>
+          </Link>
         ))}
       </nav>
 
@@ -382,8 +386,8 @@ export default async function AnalyticsPage({
                   </td>
                 </tr>
               )}
-              {recent.map((r, i) => (
-                <tr key={i} className="border-t hover:bg-gray-50">
+              {recent.map((r) => (
+                <tr key={r.sessionId} className="border-t hover:bg-gray-50">
                   <Td>{fmtDateTime(new Date(r.startedAt))}</Td>
                   <Td>{cellLabel(r.cellId)}</Td>
                   <Td>{fmtDuration(r.durationSec)}</Td>

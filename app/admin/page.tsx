@@ -6,6 +6,7 @@
  * keep this fast even at tens of thousands of rows.
  */
 
+import Link from 'next/link';
 import { and, desc, eq, gte, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { registrations, whatsappMessages } from '@/lib/schema';
@@ -158,13 +159,12 @@ export default async function AdminPage({
           >
             Gerenciar streams
           </a>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a
+          <Link
             href="/admin/analytics"
             className="inline-flex items-center rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
           >
             Analytics watch
-          </a>
+          </Link>
           <a
             href={`/api/admin/leads.csv?${exportParams.toString()}`}
             className="inline-flex items-center rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
@@ -333,10 +333,9 @@ export default async function AdminPage({
 
       <footer className="text-xs text-gray-500 pt-4">
         Tráfego das páginas <code>/ao-vivo/*</code>:{' '}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/admin/analytics" className="text-blue-600 hover:underline">
+        <Link href="/admin/analytics" className="text-blue-600 hover:underline">
           /admin/analytics
-        </a>
+        </Link>
         . Anúncios/cliques: Meta Ads Manager (Pixel ID já instalado).
       </footer>
     </main>

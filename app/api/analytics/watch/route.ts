@@ -59,6 +59,17 @@ function hashIp(ip: string | null): string | null {
   return createHash('sha256').update(ip).digest('hex').slice(0, 32);
 }
 
+let warnedMissingIp = false;
+function warnMissingIpOnce(): void {
+  if (warnedMissingIp) return;
+  warnedMissingIp = true;
+  console.warn(
+    '[watch-analytics] clientIp() returned null; falling back to sessionId ' +
+      'as rate-limit key. Verify TRUST_PROXY=1 and that the reverse proxy ' +
+      'forwards a real client IP (CF-Connecting-IP, X-Forwarded-For, etc).',
+  );
+}
+
 interface Payload {
   event?: unknown;
   sessionId?: unknown;
@@ -95,16 +106,10 @@ export async function POST(req: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
-  const ip = clientIp(req);
-  const rl = rateLimit(
-    `watch-analytics:${ip ?? 'unknown'}`,
-    RATE_LIMIT_MAX,
-    RATE_LIMIT_WINDOW_MS,
-  );
-  if (!rl.allowed) {
-    return new NextResponse(null, { status: 204 });
-  }
-
+  // Parse + validate payload BEFORE rate limiting, so we can use sessionId
+  // as a fallback bucket key when the request has no resolvable client IP.
+  // (Without that fallback, every IP-less client would share a single
+  // 'unknown' bucket and starve each other under normal traffic.)
   const payload = await readPayload(req);
   if (!payload) return new NextResponse(null, { status: 204 });
 
@@ -114,6 +119,14 @@ export async function POST(req: NextRequest) {
     !isValidSessionId(sessionId) ||
     !isValidCellId(cellId)
   ) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  const ip = clientIp(req);
+  if (!ip) warnMissingIpOnce();
+  const rlKey = `watch-analytics:${ip ?? `sid:${sessionId}`}`;
+  const rl = rateLimit(rlKey, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
+  if (!rl.allowed) {
     return new NextResponse(null, { status: 204 });
   }
 

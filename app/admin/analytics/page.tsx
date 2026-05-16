@@ -113,7 +113,7 @@ export default async function AnalyticsPage({
         ip_hash,
         extract(epoch from (coalesce(ended_at, last_heartbeat_at) - started_at))::float as dur,
         case
-          when last_heartbeat_at >= now() - (${CONCURRENT_WINDOW_SEC} || ' seconds')::interval
+          when last_heartbeat_at >= now() - (${CONCURRENT_WINDOW_SEC} * interval '1 second')
                and ended_at is null
           then 1 else 0
         end as is_live
@@ -172,7 +172,7 @@ export default async function AnalyticsPage({
     select count(*)::int as count
     from watch_sessions
     where ended_at is null
-      and last_heartbeat_at >= now() - (${CONCURRENT_WINDOW_SEC} || ' seconds')::interval
+      and last_heartbeat_at >= now() - (${CONCURRENT_WINDOW_SEC} * interval '1 second')
   `;
 
   const [perCellRaw, utmRaw, recentRaw, concurrentRaw] = await Promise.all([

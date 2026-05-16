@@ -12,15 +12,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { lt } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { watchSessions } from '@/lib/schema';
 import { intEnv } from '@/lib/env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const RETENTION_DAYS = intEnv('WATCH_SESSIONS_RETENTION_DAYS', 90);
+const BATCH_SIZE = intEnv('WATCH_SESSIONS_CLEANUP_BATCH', 5000);
+const MAX_BATCHES = intEnv('WATCH_SESSIONS_CLEANUP_MAX_BATCHES', 100);
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -34,15 +35,38 @@ export async function GET(req: NextRequest) {
   }
 
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
-  const deleted = await db
-    .delete(watchSessions)
-    .where(lt(watchSessions.startedAt, cutoff))
-    .returning({ id: watchSessions.id });
+
+  // Batch delete with LIMIT to keep lock duration and memory bounded. Each
+  // batch is its own transaction, so other queries can interleave. We cap
+  // the total batches per invocation as a safety so a runaway cron can't
+  // hold connections forever — if there's more to delete, the next scheduled
+  // run picks it up.
+  let totalDeleted = 0;
+  let batches = 0;
+  while (batches < MAX_BATCHES) {
+    const result = await db.execute(sql`
+      delete from watch_sessions
+      where id in (
+        select id from watch_sessions
+        where started_at < ${cutoff}
+        limit ${BATCH_SIZE}
+      )
+    `);
+    // postgres-js exposes affected-row count on `count`. We don't pull
+    // any returned rows back — just trust the driver-reported count.
+    const affected = (result as unknown as { count?: number }).count ?? 0;
+    totalDeleted += affected;
+    batches += 1;
+    if (affected < BATCH_SIZE) break;
+  }
 
   return NextResponse.json({
     ok: true,
     cutoff: cutoff.toISOString(),
     retentionDays: RETENTION_DAYS,
-    deleted: deleted.length,
+    deleted: totalDeleted,
+    batches,
+    batchSize: BATCH_SIZE,
+    truncated: batches >= MAX_BATCHES,
   });
 }

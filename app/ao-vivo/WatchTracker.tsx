@@ -130,14 +130,18 @@ export function WatchTracker({ cellId }: Props) {
       }
     };
 
+    // pagehide fires reliably on mobile; beforeunload is a desktop fallback.
+    // On desktop tab-close both fire, so guard against a duplicate beacon.
+    let endSent = false;
     const onPageHide = (): void => {
       stopHeartbeat();
+      if (endSent) return;
+      endSent = true;
       send('end');
     };
 
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', onPageHide);
-    // beforeunload is unreliable on mobile but doesn't hurt as a backup.
     window.addEventListener('beforeunload', onPageHide);
 
     return () => {
@@ -145,9 +149,12 @@ export function WatchTracker({ cellId }: Props) {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('beforeunload', onPageHide);
-      // Best-effort end on unmount (e.g. SPA nav). Safe even if pagehide
-      // already fired — the endpoint just stamps ended_at again.
-      send('end');
+      // Best-effort end on unmount (e.g. SPA nav). Skip if pagehide already
+      // fired the beacon.
+      if (!endSent) {
+        endSent = true;
+        send('end');
+      }
     };
   }, [cellId]);
 

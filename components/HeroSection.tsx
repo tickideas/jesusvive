@@ -39,8 +39,8 @@ export function HeroSection({ cell }: Props) {
               </li>
             </ul>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a href="#inscricao" className="btn-primary text-lg">
-                Inscreva-se
+              <a href={`/ao-vivo/${cell.slug}`} className="btn-primary text-lg">
+                Assistir ao vivo
               </a>
               <a
                 href={waLink}

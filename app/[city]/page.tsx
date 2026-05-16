@@ -3,8 +3,10 @@ import type { Metadata } from 'next';
 import { CELL_CONFIG, type CellSlug } from '@/lib/cells';
 import { HeroSection } from '@/components/HeroSection';
 import { RegistrationForm } from '@/components/RegistrationForm';
+import { getStreamConfig } from '@/lib/stream';
 
-export const dynamic = 'force-static';
+// Dynamic because the live banner reads stream_configs on each request.
+export const dynamic = 'force-dynamic';
 
 export function generateStaticParams() {
   return Object.keys(CELL_CONFIG).map((city) => ({ city }));
@@ -46,8 +48,22 @@ export default async function CityPage({
     brasilia: 'brasilia',
   };
 
+  // Show the live banner only when admin has flipped this cell's stream
+  // to an active source. Avoids lying to visitors before 19:00 BRT.
+  const stream = await getStreamConfig(cell.cellId);
+  const isLive = stream.source === 'hls' || stream.source === 'youtube';
+
   return (
     <main>
+      {isLive && (
+        <a
+          href={`/ao-vivo/${cell.slug}`}
+          className="block bg-red-600 text-white py-3 px-4 text-center font-semibold hover:bg-red-700"
+        >
+          🔴 AO VIVO AGORA — {cell.cityLabel} · Clique para assistir
+        </a>
+      )}
+
       <HeroSection cell={cell} />
 
       <section id="inscricao" className="mx-auto max-w-6xl px-4 py-12 sm:py-16">

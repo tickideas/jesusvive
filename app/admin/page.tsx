@@ -158,6 +158,13 @@ export default async function AdminPage({
           >
             Gerenciar streams
           </a>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            href="/admin/analytics"
+            className="inline-flex items-center rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          >
+            Analytics watch
+          </a>
           <a
             href={`/api/admin/leads.csv?${exportParams.toString()}`}
             className="inline-flex items-center rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
@@ -325,8 +332,12 @@ export default async function AdminPage({
       </section>
 
       <footer className="text-xs text-gray-500 pt-4">
-        Para análise de tráfego, anúncios e cliques: Meta Ads Manager (Pixel ID
-        já instalado).
+        Tráfego das páginas <code>/ao-vivo/*</code>:{' '}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/admin/analytics" className="text-blue-600 hover:underline">
+          /admin/analytics
+        </a>
+        . Anúncios/cliques: Meta Ads Manager (Pixel ID já instalado).
       </footer>
     </main>
   );

@@ -88,3 +88,41 @@ export const whatsappMessages = pgTable(
 
 export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
 export type NewWhatsappMessage = typeof whatsappMessages.$inferInsert;
+
+/**
+ * Anonymous viewer-session telemetry for the watch pages (/ao-vivo/[city]).
+ *
+ * One row per (browser tab, page load). The client generates a random
+ * `sessionId`, fires `start` on mount, `ping` every 30s while the tab is
+ * visible, and `end` on pagehide. The API endpoint upserts on sessionId.
+ *
+ * Watch duration is derived as `coalesce(ended_at, last_heartbeat_at) -
+ * started_at`. No PII: ip is hashed, no user identity is stored.
+ */
+export const watchSessions = pgTable(
+  'watch_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sessionId: text('session_id').notNull().unique(),
+    cellId: text('cell_id').notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    referrer: text('referrer'),
+    utmSource: text('utm_source'),
+    utmMedium: text('utm_medium'),
+    utmCampaign: text('utm_campaign'),
+    utmContent: text('utm_content'),
+    ipHash: text('ip_hash'),
+    userAgent: text('user_agent'),
+    isMobile: boolean('is_mobile'),
+  },
+  (table) => ({
+    cellIdx: index('watch_cell_idx').on(table.cellId),
+    startedAtIdx: index('watch_started_at_idx').on(table.startedAt),
+    heartbeatIdx: index('watch_heartbeat_idx').on(table.lastHeartbeatAt),
+  }),
+);
+
+export type WatchSession = typeof watchSessions.$inferSelect;
+export type NewWatchSession = typeof watchSessions.$inferInsert;

@@ -14,6 +14,7 @@ import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { getStreamConfig } from '@/lib/stream';
 import { WalkInModal } from '../WalkInModal';
 import { StreamPlayer } from '../StreamPlayer';
+import { WatchTracker } from '../WatchTracker';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -54,6 +55,7 @@ export default async function CellStreamPage({
 
   return (
     <main className="min-h-screen bg-brand-dark text-white">
+      <WatchTracker cellId={cell.cellId} />
       <header className="border-b border-white/10 bg-brand-dark/95 backdrop-blur sticky top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div>

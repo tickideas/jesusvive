@@ -22,6 +22,19 @@
   }
 }
 
+/* Plyr fills its container instead of sizing to the video element.
+   Without this the controls float at the top of the 16:9 box on wide
+   screens because Plyr's wrapper defaults to intrinsic video size. */
+.plyr,
+.plyr__video-wrapper,
+.plyr video {
+  width: 100% !important;
+  height: 100% !important;
+}
+.plyr--video {
+  background: #000;
+}
+
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg

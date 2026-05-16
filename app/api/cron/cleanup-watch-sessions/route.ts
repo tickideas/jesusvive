@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
+import { watchSessions } from '@/lib/schema';
 import { intEnv } from '@/lib/env';
 
 export const runtime = 'nodejs';
@@ -41,20 +42,36 @@ export async function GET(req: NextRequest) {
   // the total batches per invocation as a safety so a runaway cron can't
   // hold connections forever — if there's more to delete, the next scheduled
   // run picks it up.
+  //
+  // The query uses a CTE so we get a deterministic { deleted: int } row
+  // back instead of depending on the undocumented `result.count` shape
+  // that postgres-js leaks through drizzle's `db.execute`. Table and
+  // column names are interpolated from the schema so a rename in
+  // lib/schema.ts surfaces as a type error here.
   let totalDeleted = 0;
   let batches = 0;
   while (batches < MAX_BATCHES) {
-    const result = await db.execute(sql`
-      delete from watch_sessions
-      where id in (
-        select id from watch_sessions
-        where started_at < ${cutoff}
-        limit ${BATCH_SIZE}
+    const rows = (await db.execute(sql`
+      with deleted as (
+        delete from ${watchSessions}
+        where ${watchSessions.id} in (
+          select ${watchSessions.id} from ${watchSessions}
+          where ${watchSessions.startedAt} < ${cutoff}
+          limit ${BATCH_SIZE}
+        )
+        returning 1
       )
-    `);
-    // postgres-js exposes affected-row count on `count`. We don't pull
-    // any returned rows back — just trust the driver-reported count.
-    const affected = (result as unknown as { count?: number }).count ?? 0;
+      select count(*)::int as deleted from deleted
+    `)) as unknown as Array<{ deleted: number }>;
+
+    const affected = rows[0]?.deleted;
+    if (typeof affected !== 'number') {
+      // The driver returned an unexpected shape. Fail loud so a silent
+      // "deleted 0, exit" can't hide an outage.
+      throw new Error(
+        '[cleanup-watch-sessions] driver returned unexpected shape; aborting',
+      );
+    }
     totalDeleted += affected;
     batches += 1;
     if (affected < BATCH_SIZE) break;

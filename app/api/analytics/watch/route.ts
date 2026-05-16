@@ -45,6 +45,15 @@ const RATE_LIMIT_WINDOW_MS = intEnv(
   'WATCH_ANALYTICS_RATE_LIMIT_WINDOW_MS',
   60_000,
 );
+// Global cap for traffic with no resolvable client IP. Without this, a
+// misconfigured proxy degrades to per-sessionId buckets, and since sessionId
+// is client-controlled an attacker can fake unique ids forever — effectively
+// no rate limit at all. This shared bucket caps the *total* IP-less write
+// volume per minute across the whole service.
+const RATE_LIMIT_NULL_IP_MAX = intEnv(
+  'WATCH_ANALYTICS_NULL_IP_RATE_LIMIT_MAX',
+  600,
+);
 
 // Optional CSRF-ish origin check. When unset (dev/staging), accept any
 // origin so local testing still works. In production set this to your
@@ -124,10 +133,25 @@ export async function POST(req: NextRequest) {
 
   const ip = clientIp(req);
   if (!ip) warnMissingIpOnce();
+  // Two-stage rate limit when IP is unknown:
+  //   (a) per-session bucket: stops one runaway tab from spamming;
+  //   (b) global IP-less bucket: caps total spoofable null-IP volume
+  //       regardless of how many fresh sessionIds an attacker mints.
+  // When IP is present we just bucket per-IP as before.
   const rlKey = `watch-analytics:${ip ?? `sid:${sessionId}`}`;
   const rl = rateLimit(rlKey, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
   if (!rl.allowed) {
     return new NextResponse(null, { status: 204 });
+  }
+  if (!ip) {
+    const globalRl = rateLimit(
+      'watch-analytics:null-ip-global',
+      RATE_LIMIT_NULL_IP_MAX,
+      RATE_LIMIT_WINDOW_MS,
+    );
+    if (!globalRl.allowed) {
+      return new NextResponse(null, { status: 204 });
+    }
   }
 
   try {
